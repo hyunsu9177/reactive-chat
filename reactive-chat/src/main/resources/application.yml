@@ -1,0 +1,13 @@
+spring:
+  kafka:
+    bootstrap-servers: localhost:9092
+  redis:
+    host: localhost
+    port: 6379
+  r2dbc:
+    url: r2dbc:postgresql://localhost:5432/chatdb
+    username: postgres
+    password: password
+
+server:
+  port: 8080
