@@ -14,15 +14,19 @@ import org.springframework.stereotype.Service;
 public class ChatMessageConsumer {
 
     private final SimpMessagingTemplate messagingTemplate;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper;
 
     @KafkaListener(topics = "chat-message", groupId = "chat-group")
-    public void listen(String messageJson) {
+    public void listen(String message) {
         try {
-            ChatMessage message = objectMapper.readValue(messageJson, ChatMessage.class);
-            messagingTemplate.convertAndSend("/topic/chatroom", message);
+            ChatMessage chatMessage = objectMapper.readValue(message, ChatMessage.class);
+            log.info("Received message from Kafka: {}", chatMessage);
+            
+            // 모든 연결된 클라이언트에게 메시지 전송
+            messagingTemplate.convertAndSend("/topic/public", chatMessage);
+            
         } catch (Exception e) {
-            log.error("Kafka 메시지 처리 실패", e);
+            log.error("Error processing message: {}", message, e);
         }
     }
 }
