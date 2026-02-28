@@ -44,6 +44,9 @@ Spring Boot 3.4.3 (WebFlux + WebSocket) 기반의 **실시간 WebSocket 채팅 �
 
 - **JSON**: Jackson에서 `snake_case` 프로퍼티 네이밍 사용 (`JacksonConfig`)
 - **Lombok**: 모델 클래스에 사용
+- **Validation**: `ChatMessage`에 `@NotBlank`, `@Size` 검증 적용 (`spring-boot-starter-validation`)
+- **Kafka 설정**: 토픽명(`app.kafka.topic.chat-message`), 컨슈머 그룹(`spring.kafka.consumer.group-id`)은 `application.yml`에서 관리
+- **WebSocket CORS**: `http://localhost:8080`만 허용
 - **프론트엔드**: `src/main/resources/static/`에 바닐라 HTML/JS (SockJS + STOMP.js CDN)
 - **언어**: 코드 주석 및 UI 텍스트는 한국어
 
@@ -51,10 +54,10 @@ Spring Boot 3.4.3 (WebFlux + WebSocket) 기반의 **실시간 WebSocket 채팅 �
 
 | 서비스     | 포트 | 용도                                          |
 |------------|------|-----------------------------------------------|
-| Kafka      | 9092 | 메시지 브로커 (컨슈머 그룹: `chat-group`)     |
+| Kafka      | 9092 | 메시지 브로커                                 |
 | Zookeeper  | 2181 | Kafka 코디네이션                              |
-| Redis      | 6379 | 설정되어 있으나 아직 미사용                   |
-| PostgreSQL | 5432 | R2DBC 설정 완료 (`chatdb`), 아직 미사용       |
+| Redis      | 6379 | 설정 완료, 추후 활용 예정                     |
+| PostgreSQL | 5432 | R2DBC 설정 완료 (`chatdb`), 추후 활용 예정    |
 
 ### 패키지 구조 (`com.allpick.reactivechat`)
 
