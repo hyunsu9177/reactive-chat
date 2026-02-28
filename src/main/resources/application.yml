@@ -1,6 +1,8 @@
 spring:
   kafka:
     bootstrap-servers: localhost:9092
+    consumer:
+      group-id: chat-group
   redis:
     host: localhost
     port: 6379
@@ -8,6 +10,11 @@ spring:
     url: r2dbc:postgresql://localhost:5432/chatdb
     username: postgres
     password: password
+
+app:
+  kafka:
+    topic:
+      chat-message: chat-message
 
 server:
   port: 8080

@@ -3,6 +3,7 @@ package com.allpick.reactivechat.controller;
 import com.allpick.reactivechat.kafka.ChatMessageProducer;
 import com.allpick.reactivechat.model.ChatMessage;
 import com.allpick.reactivechat.service.OnlineUserService;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -23,14 +24,14 @@ public class ChatController {
     private final ChatMessageProducer chatMessageProducer;
 
     @MessageMapping("/chat.sendMessage")
-    public void sendMessage(@Payload ChatMessage chatMessage) {
+    public void sendMessage(@Valid @Payload ChatMessage chatMessage) {
         log.info("Received message: {}", chatMessage);
         chatMessage.setTimestamp(LocalDateTime.now().toString());
         chatMessageProducer.sendMessage(chatMessage);
     }
 
     @MessageMapping("/chat.addUser")
-    public void addUser(@Payload ChatMessage chatMessage, 
+    public void addUser(@Valid @Payload ChatMessage chatMessage,
                        SimpMessageHeaderAccessor headerAccessor) {
         log.info("User joining: {}", chatMessage.getSender());
         // 세션에 사용자명 저장

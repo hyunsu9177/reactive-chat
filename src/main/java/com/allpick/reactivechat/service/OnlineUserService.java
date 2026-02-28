@@ -35,10 +35,6 @@ public class OnlineUserService {
         return Set.copyOf(onlineUsers);
     }
     
-    public boolean isUserOnline(String userId) {
-        return onlineUsers.contains(userId);
-    }
-    
     public int getOnlineUserCount() {
         return onlineUsers.size();
     }

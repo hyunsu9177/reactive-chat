@@ -16,15 +16,15 @@ public class ChatMessageConsumer {
     private final SimpMessagingTemplate messagingTemplate;
     private final ObjectMapper objectMapper;
 
-    @KafkaListener(topics = "chat-message", groupId = "chat-group")
+    @KafkaListener(topics = "${app.kafka.topic.chat-message}")
     public void listen(String message) {
         try {
             ChatMessage chatMessage = objectMapper.readValue(message, ChatMessage.class);
             log.info("Received message from Kafka: {}", chatMessage);
-            
+
             // 모든 연결된 클라이언트에게 메시지 전송
             messagingTemplate.convertAndSend("/topic/public", chatMessage);
-            
+
         } catch (Exception e) {
             log.error("Error processing message: {}", message, e);
         }
