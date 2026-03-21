@@ -77,6 +77,13 @@
       animation: pulse 1.5s infinite;
     }
 
+    .reconnecting {
+      background: rgba(255, 165, 0, 0.2);
+      border: 2px solid #ff8c00;
+      color: #ff8c00;
+      animation: pulse 1.5s infinite;
+    }
+
     @keyframes pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.7; }
@@ -402,14 +409,14 @@
 <body>
 <div class="chat-container">
   <div class="chat-header">
-    <h2>🚀 Reactive Chat</h2>
+    <h2>Reactive Chat</h2>
     <div id="connection-status" class="connection-status disconnected">
-      ❌ 연결 안됨
+      연결 안됨
     </div>
   </div>
 
   <div class="online-users">
-    <strong>💚 온라인 사용자 (<span id="online-count" class="online-count">0</span>명):</strong>
+    <strong>온라인 사용자 (<span id="online-count" class="online-count">0</span>명):</strong>
     <span id="online-users-list">없음</span>
   </div>
 
@@ -426,13 +433,13 @@
   <div class="chat-input-container">
     <div class="chat-input">
       <input type="text" id="username-input" placeholder="사용자명을 입력하세요" maxlength="20">
-      <button id="connect-btn" class="btn-primary" onclick="connect()">연결</button>
-      <button id="disconnect-btn" class="btn-secondary" onclick="disconnect()" style="display:none">연결해제</button>
+      <button id="connect-btn" class="btn-primary">연결</button>
+      <button id="disconnect-btn" class="btn-secondary" style="display:none">연결해제</button>
     </div>
 
     <div class="chat-input" id="message-input-area" style="display:none">
       <input type="text" id="message-input" placeholder="메시지를 입력하세요" maxlength="500">
-      <button id="send-btn" class="btn-success" onclick="sendMessage()">전송</button>
+      <button id="send-btn" class="btn-success">전송</button>
     </div>
   </div>
 </div>
@@ -440,9 +447,38 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 <script>
+(function() {
+  'use strict';
+
+  // 최대 DOM 메시지 수
+  const MAX_MESSAGES = 200;
+
+  // 재연결 설정
+  const RECONNECT_MAX_ATTEMPTS = 5;
+  const RECONNECT_BASE_DELAY_MS = 1000;
+
   let stompClient = null;
   let username = null;
   let connected = false;
+  let sending = false;
+  let reconnectAttempts = 0;
+  let reconnectTimer = null;
+  let intentionalDisconnect = false;
+
+  // XSS 방지: HTML 이스케이핑
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  // DOM 메시지 수 제한 (오래된 메시지 제거)
+  function trimMessages() {
+    const messagesDiv = document.getElementById('chat-messages');
+    while (messagesDiv.children.length > MAX_MESSAGES) {
+      messagesDiv.removeChild(messagesDiv.firstChild);
+    }
+  }
 
   function connect() {
     username = document.getElementById('username-input').value.trim();
@@ -451,7 +487,13 @@
       return;
     }
 
-    updateConnectionStatus('connecting');
+    intentionalDisconnect = false;
+    reconnectAttempts = 0;
+    doConnect();
+  }
+
+  function doConnect() {
+    updateConnectionStatus(reconnectAttempts > 0 ? 'reconnecting' : 'connecting');
 
     const socket = new SockJS('/ws');
     stompClient = Stomp.over(socket);
@@ -462,6 +504,7 @@
     stompClient.connect({}, function(frame) {
       console.log('Connected: ' + frame);
       connected = true;
+      reconnectAttempts = 0;
 
       updateConnectionStatus('connected');
       showMessageInput();
@@ -470,10 +513,9 @@
       stompClient.subscribe('/topic/public', function(message) {
         try {
           const chatMessage = JSON.parse(message.body);
-          console.log('Received message:', chatMessage);
           displayMessage(chatMessage);
         } catch (e) {
-          console.error('Error parsing message:', e);
+          console.error('메시지 파싱 오류:', e);
         }
       });
 
@@ -481,10 +523,9 @@
       stompClient.subscribe('/topic/user-status', function(message) {
         try {
           const statusUpdate = JSON.parse(message.body);
-          console.log('Status update:', statusUpdate);
           updateOnlineUsers(statusUpdate);
         } catch (e) {
-          console.error('Error parsing status update:', e);
+          console.error('상태 업데이트 파싱 오류:', e);
         }
       });
 
@@ -498,13 +539,45 @@
       stompClient.send("/app/chat.addUser", {}, JSON.stringify(joinMessage));
 
     }, function(error) {
-      console.error('Connection error:', error);
-      updateConnectionStatus('disconnected');
-      alert('서버에 연결할 수 없습니다. 서버가 실행 중인지 확인해주세요.');
+      console.error('연결 오류:', error);
+      connected = false;
+      stompClient = null;
+
+      // 의도적 연결 해제가 아닌 경우 재연결 시도
+      if (!intentionalDisconnect) {
+        attemptReconnect();
+      } else {
+        updateConnectionStatus('disconnected');
+      }
     });
   }
 
+  // 지수 백오프 재연결
+  function attemptReconnect() {
+    if (reconnectAttempts >= RECONNECT_MAX_ATTEMPTS) {
+      updateConnectionStatus('disconnected');
+      alert('서버에 연결할 수 없습니다. 페이지를 새로고침해주세요.');
+      return;
+    }
+
+    reconnectAttempts++;
+    const delay = RECONNECT_BASE_DELAY_MS * Math.pow(2, reconnectAttempts - 1);
+    updateConnectionStatus('reconnecting');
+
+    console.log('재연결 시도 ' + reconnectAttempts + '/' + RECONNECT_MAX_ATTEMPTS + ' (' + delay + 'ms 후)');
+    reconnectTimer = setTimeout(function() {
+      doConnect();
+    }, delay);
+  }
+
   function disconnect() {
+    intentionalDisconnect = true;
+
+    if (reconnectTimer) {
+      clearTimeout(reconnectTimer);
+      reconnectTimer = null;
+    }
+
     if (stompClient !== null && connected) {
       stompClient.disconnect(function() {
         console.log("Disconnected");
@@ -513,22 +586,35 @@
 
     connected = false;
     stompClient = null;
+    reconnectAttempts = 0;
     updateConnectionStatus('disconnected');
     hideMessageInput();
   }
 
   function sendMessage() {
-    const messageContent = document.getElementById('message-input').value.trim();
+    if (sending) return;
+
+    const messageInput = document.getElementById('message-input');
+    const messageContent = messageInput.value.trim();
     if (messageContent && stompClient && connected) {
+      sending = true;
+      document.getElementById('send-btn').disabled = true;
+
       const chatMessage = {
         sender: username,
         content: messageContent,
         type: 'CHAT'
       };
 
-      console.log('Sending message:', chatMessage);
       stompClient.send("/app/chat.sendMessage", {}, JSON.stringify(chatMessage));
-      document.getElementById('message-input').value = '';
+      messageInput.value = '';
+
+      // 전송 완료 후 버튼 재활성화
+      setTimeout(function() {
+        sending = false;
+        document.getElementById('send-btn').disabled = false;
+        messageInput.focus();
+      }, 300);
     }
   }
 
@@ -540,14 +626,17 @@
     const now = new Date();
     const timeString = now.toLocaleTimeString();
 
+    // XSS 방지: 모든 사용자 입력을 이스케이핑
+    const safeSender = escapeHtml(message.sender || '');
+    const safeContent = escapeHtml(message.content || '');
+
     if (message.type === 'JOIN' || message.type === 'LEAVE') {
       messageElement.classList.add('system');
-      messageElement.innerHTML = `
-        <div class="message-bubble">
-          <div class="message-content">${message.content}</div>
-          <div class="message-time">${timeString}</div>
-        </div>
-      `;
+      messageElement.innerHTML =
+        '<div class="message-bubble">' +
+          '<div class="message-content">' + safeContent + '</div>' +
+          '<div class="message-time">' + timeString + '</div>' +
+        '</div>';
     } else {
       if (message.sender === username) {
         messageElement.classList.add('own');
@@ -555,17 +644,19 @@
         messageElement.classList.add('other');
       }
 
-      messageElement.innerHTML = `
-        <div class="message-sender">${message.sender}</div>
-        <div class="message-bubble">
-          <div class="message-content">${message.content}</div>
-          <div class="message-time">${timeString}</div>
-        </div>
-      `;
+      messageElement.innerHTML =
+        '<div class="message-sender">' + safeSender + '</div>' +
+        '<div class="message-bubble">' +
+          '<div class="message-content">' + safeContent + '</div>' +
+          '<div class="message-time">' + timeString + '</div>' +
+        '</div>';
     }
 
     messagesDiv.appendChild(messageElement);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
+
+    // DOM 메시지 수 제한
+    trimMessages();
   }
 
   function updateConnectionStatus(status) {
@@ -574,13 +665,16 @@
 
     switch(status) {
       case 'connected':
-        statusDiv.textContent = '✅ 연결됨';
+        statusDiv.textContent = '연결됨';
         break;
       case 'connecting':
-        statusDiv.textContent = '🔄 연결 중...';
+        statusDiv.textContent = '연결 중...';
+        break;
+      case 'reconnecting':
+        statusDiv.textContent = '재연결 중... (' + reconnectAttempts + '/' + RECONNECT_MAX_ATTEMPTS + ')';
         break;
       default:
-        statusDiv.textContent = '❌ 연결 안됨';
+        statusDiv.textContent = '연결 안됨';
     }
   }
 
@@ -601,36 +695,39 @@
   }
 
   function updateOnlineUsers(statusUpdate) {
-    if (statusUpdate.totalOnlineUsers !== undefined) {
-      document.getElementById('online-count').textContent = statusUpdate.totalOnlineUsers;
+    if (statusUpdate.total_online_users !== undefined) {
+      document.getElementById('online-count').textContent = statusUpdate.total_online_users;
     }
 
-    if (statusUpdate.onlineUsers && statusUpdate.onlineUsers.length > 0) {
+    if (statusUpdate.online_users && statusUpdate.online_users.length > 0) {
       const usersList = document.getElementById('online-users-list');
-      usersList.textContent = Array.from(statusUpdate.onlineUsers).join(', ');
+      usersList.textContent = Array.from(statusUpdate.online_users).map(function(u) { return escapeHtml(u); }).join(', ');
     } else {
-      // API에서 온라인 사용자 목록 가져오기
       fetchOnlineUsers();
     }
   }
 
   function fetchOnlineUsers() {
     fetch('/api/online-users')
-      .then(response => response.json())
-      .then(users => {
+      .then(function(response) { return response.json(); })
+      .then(function(users) {
         const usersList = document.getElementById('online-users-list');
         const usersArray = Array.from(users);
         usersList.textContent = usersArray.length > 0 ? usersArray.join(', ') : '없음';
 
-        const count = document.getElementById('online-count');
+        var count = document.getElementById('online-count');
         count.textContent = usersArray.length;
       })
-      .catch(error => {
-        console.error('Error fetching online users:', error);
+      .catch(function(error) {
+        console.error('온라인 사용자 조회 오류:', error);
       });
   }
 
-  // Enter 키 이벤트
+  // 이벤트 바인딩
+  document.getElementById('connect-btn').addEventListener('click', connect);
+  document.getElementById('disconnect-btn').addEventListener('click', disconnect);
+  document.getElementById('send-btn').addEventListener('click', sendMessage);
+
   document.getElementById('message-input').addEventListener('keypress', function(e) {
     if (e.key === 'Enter') {
       sendMessage();
@@ -646,6 +743,7 @@
   // 페이지 종료 시 정리
   window.addEventListener('beforeunload', function() {
     if (connected) {
+      intentionalDisconnect = true;
       disconnect();
     }
   });
@@ -655,6 +753,7 @@
     fetchOnlineUsers();
     document.getElementById('username-input').focus();
   });
+})();
 </script>
 </body>
 </html>

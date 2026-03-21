@@ -1,5 +1,6 @@
 package com.allpick.reactivechat.kafka;
 
+import com.allpick.reactivechat.common.ChatConstants;
 import com.allpick.reactivechat.model.ChatMessage;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -23,7 +24,7 @@ public class ChatMessageConsumer {
             log.info("Received message from Kafka: {}", chatMessage);
 
             // 모든 연결된 클라이언트에게 메시지 전송
-            messagingTemplate.convertAndSend("/topic/public", chatMessage);
+            messagingTemplate.convertAndSend(ChatConstants.TOPIC_PUBLIC, chatMessage);
 
         } catch (Exception e) {
             log.error("Error processing message: {}", message, e);

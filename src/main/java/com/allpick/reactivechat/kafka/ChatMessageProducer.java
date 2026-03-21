@@ -22,10 +22,18 @@ public class ChatMessageProducer {
     public void sendMessage(ChatMessage message) {
         try {
             String jsonMessage = objectMapper.writeValueAsString(message);
-            kafkaTemplate.send(chatMessageTopic, jsonMessage);
-            log.info("Message sent to Kafka: {}", message);
+            kafkaTemplate.send(chatMessageTopic, jsonMessage)
+                    .whenComplete((result, ex) -> {
+                        if (ex != null) {
+                            log.error("Kafka 메시지 전송 실패: {}", message, ex);
+                        } else {
+                            log.info("Kafka 메시지 전송 성공: topic={}, offset={}",
+                                    result.getRecordMetadata().topic(),
+                                    result.getRecordMetadata().offset());
+                        }
+                    });
         } catch (Exception e) {
-            log.error("Error sending message to Kafka: {}", message, e);
+            log.error("메시지 직렬화 실패: {}", message, e);
         }
     }
 }

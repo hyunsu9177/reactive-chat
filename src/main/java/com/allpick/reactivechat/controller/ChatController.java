@@ -12,8 +12,10 @@ import org.springframework.messaging.simp.SimpMessageHeaderAccessor;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.Set;
+import java.util.UUID;
 
 @Slf4j
 @RestController
@@ -22,11 +24,13 @@ public class ChatController {
 
     private final OnlineUserService onlineUserService;
     private final ChatMessageProducer chatMessageProducer;
+    private final Clock clock;
 
     @MessageMapping("/chat.sendMessage")
     public void sendMessage(@Valid @Payload ChatMessage chatMessage) {
         log.info("Received message: {}", chatMessage);
-        chatMessage.setTimestamp(LocalDateTime.now().toString());
+        chatMessage.setId(UUID.randomUUID().toString());
+        chatMessage.setTimestamp(LocalDateTime.now(clock).toString());
         chatMessageProducer.sendMessage(chatMessage);
     }
 
@@ -36,12 +40,13 @@ public class ChatController {
         log.info("User joining: {}", chatMessage.getSender());
         // 세션에 사용자명 저장
         headerAccessor.getSessionAttributes().put("username", chatMessage.getSender());
-        
+
         // 사용자를 온라인 목록에 추가
         onlineUserService.addUser(chatMessage.getSender());
-        
+
         // JOIN 메시지를 Kafka로 전송
-        chatMessage.setTimestamp(LocalDateTime.now().toString());
+        chatMessage.setId(UUID.randomUUID().toString());
+        chatMessage.setTimestamp(LocalDateTime.now(clock).toString());
         chatMessage.setType(ChatMessage.MessageType.JOIN);
         chatMessageProducer.sendMessage(chatMessage);
     }

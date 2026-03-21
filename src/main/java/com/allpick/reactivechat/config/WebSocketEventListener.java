@@ -11,7 +11,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 @Slf4j
 @Component
@@ -20,6 +22,7 @@ public class WebSocketEventListener {
 
     private final OnlineUserService onlineUserService;
     private final ChatMessageProducer chatMessageProducer;
+    private final Clock clock;
 
     @EventListener
     public void handleWebSocketConnectListener(SessionConnectedEvent event) {
@@ -30,21 +33,22 @@ public class WebSocketEventListener {
     public void handleWebSocketDisconnectListener(SessionDisconnectEvent event) {
         StompHeaderAccessor headerAccessor = StompHeaderAccessor.wrap(event.getMessage());
         String username = (String) headerAccessor.getSessionAttributes().get("username");
-        
+
         if (username != null) {
             log.info("User {} disconnected", username);
-            
+
             // 사용자를 온라인 목록에서 제거
             onlineUserService.removeUser(username);
-            
+
             // LEAVE 메시지를 Kafka로 전송
             ChatMessage leaveMessage = ChatMessage.builder()
+                    .id(UUID.randomUUID().toString())
                     .sender(username)
                     .content(username + "님이 채팅을 떠났습니다.")
                     .type(ChatMessage.MessageType.LEAVE)
-                    .timestamp(LocalDateTime.now().toString())
+                    .timestamp(LocalDateTime.now(clock).toString())
                     .build();
-            
+
             chatMessageProducer.sendMessage(leaveMessage);
         }
     }
