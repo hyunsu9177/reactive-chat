@@ -1,0 +1,20 @@
+# CodeFoundry 자동 머지의 관문 — 이 검사가 초록일 때만 팩토리 PR이 머지된다.
+# 이 파일은 사람이 관리한다: 팩토리 PAT에는 Workflows 권한이 없다(의도적).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"        # build.gradle toolchain과 일치
+      - uses: gradle/actions/setup-gradle@v4
+      - run: ./gradlew --no-daemon test
