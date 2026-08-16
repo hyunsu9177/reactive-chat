@@ -25,7 +25,7 @@ Spring Boot + Kafka 기반의 실시간 WebSocket 채팅 애플리케이션입�
 | Language | Java 21 |
 | Build | Gradle |
 
-## 시작하기
+## 실행 방법
 
 ### 사전 준비
 
@@ -40,13 +40,19 @@ docker-compose up -d
 
 Kafka, Zookeeper, Redis, PostgreSQL이 실행됩니다.
 
-### 2. 애플리케이션 실행
+### 2. 빌드
+
+```sh
+./gradlew build
+```
+
+### 3. 애플리케이션 실행
 
 ```sh
 ./gradlew bootRun
 ```
 
-### 3. 접속
+### 4. 접속
 
 브라우저에서 [http://localhost:8080](http://localhost:8080)에 접속합니다.
 
