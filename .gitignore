@@ -35,3 +35,6 @@ out/
 
 ### VS Code ###
 .vscode/
+# 로컬 전용 설정(org.gradle.java.home 등)은 커밋하지 않는다 — CI(리눅스)를 깨뜨린다.
+# JDK 선택은 build.gradle의 toolchain(21)이 담당한다.
+gradle.properties
