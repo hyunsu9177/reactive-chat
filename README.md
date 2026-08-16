@@ -1,5 +1,7 @@
 # Reactive Chat
 
+[![CI](https://github.com/hyunsu9177/reactive-chat/actions/workflows/ci.yml/badge.svg?branch=master)](https://github.com/hyunsu9177/reactive-chat/actions/workflows/ci.yml)
+
 Spring Boot + Kafka 기반의 실시간 WebSocket 채팅 애플리케이션입니다.
 
 ## 주요 기능
