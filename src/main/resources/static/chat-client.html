@@ -556,7 +556,7 @@
 
   <div class="online-users">
     <strong>온라인 사용자 (<span id="online-count" class="online-count">0</span>명):</strong>
-    <span id="online-users-list">없음</span>
+    <span id="online-users-list">아직 아무도 없어요 — 첫 번째로 참여해 보세요!</span>
   </div>
 
   <div id="chat-messages" class="chat-messages">
@@ -875,7 +875,7 @@
       .then(function(users) {
         const usersList = document.getElementById('online-users-list');
         const usersArray = Array.from(users);
-        usersList.textContent = usersArray.length > 0 ? usersArray.join(', ') : '없음';
+        usersList.textContent = usersArray.length > 0 ? usersArray.join(', ') : '아직 아무도 없어요 — 첫 번째로 참여해 보세요!';
 
         var count = document.getElementById('online-count');
         count.textContent = usersArray.length;
