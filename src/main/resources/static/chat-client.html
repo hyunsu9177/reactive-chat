@@ -495,7 +495,7 @@
   function doConnect() {
     updateConnectionStatus(reconnectAttempts > 0 ? 'reconnecting' : 'connecting');
 
-    const socket = new SockJS('/ws');
+    const socket = new SockJS('ws');
     stompClient = Stomp.over(socket);
 
     // 디버그 로깅 비활성화
@@ -708,7 +708,7 @@
   }
 
   function fetchOnlineUsers() {
-    fetch('/api/online-users')
+    fetch('api/online-users')
       .then(function(response) { return response.json(); })
       .then(function(users) {
         const usersList = document.getElementById('online-users-list');
