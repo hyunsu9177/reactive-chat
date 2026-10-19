@@ -30,6 +30,13 @@ jobs:
           distribution: temurin
           java-version: "21"
       - uses: gradle/actions/setup-gradle@v4
+      # Chromium 캐시 — 매 실행 1분 내려받던 것을 재사용한다. 키는 build.gradle 의
+      # playwright 버전과 함께 바뀌고, 복원 시 playwrightInstall 은 다운로드를 건너뛴다
+      # (시스템 의존성 apt 설치는 그대로 한다).
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('build.gradle') }}
       - run: ./gradlew --no-daemon playwrightInstall
       - run: ./gradlew --no-daemon e2eTest
       - if: failure()
