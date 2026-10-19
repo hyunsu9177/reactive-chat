@@ -17,6 +17,11 @@ docker-compose up -d
 # 테스트 실행
 ./gradlew test
 
+# 브라우저 스모크 테스트 (Playwright + 내장 Kafka, @Tag("e2e") — 기본 test에서는 빠진다)
+# 첫 실행 때 chromium을 내려받는다. CodeFoundry 에이전트 환경에서는 브라우저를 받을 수 없으니
+# 돌리지 말고 CI(e2e job)에 맡긴다. 화면(chat-client.html)의 id를 바꾸면 이 테스트도 함께 고친다.
+./gradlew e2eTest
+
 # 클린 빌드
 ./gradlew clean build
 ```
